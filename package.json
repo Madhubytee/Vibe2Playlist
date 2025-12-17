@@ -1,0 +1,28 @@
+{
+  "name": "vibe2playlist",
+  "version": "1.0.0",
+  "description": "Turn a video clip into a Spotify playlist!",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Madhubytee/Vibe2Playlist.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Madhubytee/Vibe2Playlist/issues"
+  },
+  "homepage": "https://github.com/Madhubytee/Vibe2Playlist#readme",
+  "dependencies": {
+    "next": "^16.0.10",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  }
+}
