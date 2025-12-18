@@ -1,11 +1,44 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [file, setFile] = useState(null);
   const [status, setStatus] = useState('idle');
   const [result, setResult] = useState(null);
+  const [spotifyToken, setSpotifyToken] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const expiresIn = params.get('expires_in');
+
+    if (accessToken) {
+      localStorage.setItem('spotify_access_token', accessToken);
+      localStorage.setItem('spotify_refresh_token', refreshToken);
+      localStorage.setItem('spotify_token_expiry', Date.now() + expiresIn * 1000);
+      setSpotifyToken(accessToken);
+
+      window.history.replaceState({}, document.title, '/');
+    } else {
+      const savedToken = localStorage.getItem('spotify_access_token');
+      const expiry = localStorage.getItem('spotify_token_expiry');
+
+      if (savedToken && expiry && Date.now() < expiry) {
+        setSpotifyToken(savedToken);
+      }
+    }
+  }, []);
+
+  const handleSpotifyLogin = async () => {
+    const response = await fetch('/api/auth/login');
+    const data = await response.json();
+
+    if (data.authUrl) {
+      window.location.href = data.authUrl;
+    }
+  };
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -48,6 +81,29 @@ export default function Home() {
     <main style={{ padding: '2rem', fontFamily: 'system-ui, sans-serif', maxWidth: '600px' }}>
       <h1>Vibe2Playlist</h1>
       <p>Turn a video clip into a Spotify playlist!</p>
+
+      <div style={{ marginTop: '1rem', marginBottom: '2rem' }}>
+        {spotifyToken ? (
+          <div style={{ padding: '0.5rem', backgroundColor: '#d4edda', borderRadius: '4px', color: '#155724' }}>
+            ✓ Connected to Spotify
+          </div>
+        ) : (
+          <button
+            onClick={handleSpotifyLogin}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#1DB954',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+            }}
+          >
+            Connect Spotify
+          </button>
+        )}
+      </div>
 
       <div style={{ marginTop: '2rem' }}>
         <input
