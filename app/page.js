@@ -55,9 +55,15 @@ export default function Home() {
     const formData =new FormData();
     formData.append('video', file);
 
+    const headers = {};
+    if (spotifyToken) {
+      headers['x-spotify-token'] = spotifyToken;
+    }
+
     try {
       const response = await fetch('/api/identify', {
         method: 'POST',
+        headers,
         body: formData,
       });
       const data = await response.json();
@@ -138,10 +144,40 @@ export default function Home() {
         }}>
           <h3>Results:</h3>
           {status === 'recognizing' && <p>Recognizing...</p>}
-          {status === 'success' && (
-            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {JSON.stringify(result, null, 2)}
-            </pre>
+          {status === 'success' && result?.song && (
+            <div>
+              <h4 style={{ marginTop: 0 }}>Detected Song:</h4>
+              <p><strong>{result.song.title}</strong> by {result.song.artists}</p>
+              {result.song.album && <p>Album: {result.song.album}</p>}
+
+              {result.spotifyTrack ? (
+                <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#1DB954', borderRadius: '4px' }}>
+                  <h4 style={{ margin: 0, color: 'white' }}>Found on Spotify:</h4>
+                  <p style={{ color: 'white', margin: '0.5rem 0' }}>
+                    <strong>{result.spotifyTrack.name}</strong> by {result.spotifyTrack.artists}
+                  </p>
+                  <a
+                    href={result.spotifyTrack.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'white', textDecoration: 'underline' }}
+                  >
+                    Open in Spotify
+                  </a>
+                </div>
+              ) : (
+                <p style={{ color: '#856404', backgroundColor: '#fff3cd', padding: '0.5rem', borderRadius: '4px' }}>
+                  Song detected but not found on Spotify
+                </p>
+              )}
+
+              <details style={{ marginTop: '1rem' }}>
+                <summary style={{ cursor: 'pointer' }}>Show raw data</summary>
+                <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.8rem' }}>
+                  {JSON.stringify(result, null, 2)}
+                </pre>
+              </details>
+            </div>
           )}
           {status === 'error' && (
             <p style={{ color: 'red' }}>Error: {result?.error}</p>

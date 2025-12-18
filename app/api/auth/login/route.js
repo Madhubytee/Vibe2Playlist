@@ -12,7 +12,7 @@ export async function GET() {
     );
   }
 
-  const codeVerifier = generateCodeVerifier();
+  const codeVerifier =generateCodeVerifier();
   const codeChallenge = generateCodeChallenge(codeVerifier);
 
   const scopes = [
@@ -20,7 +20,6 @@ export async function GET() {
     'playlist-modify-public',
     'playlist-modify-private'
   ];
-
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: 'code',
@@ -36,7 +35,6 @@ export async function GET() {
     authUrl,
     codeVerifier
   });
-
   response.cookies.set('spotify_code_verifier', codeVerifier, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

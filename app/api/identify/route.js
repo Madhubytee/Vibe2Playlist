@@ -5,6 +5,7 @@ import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import crypto from 'crypto';
+import { parseACRCloudResult, searchSpotifyTrack } from '../../../lib/spotify.js';
 
 const execPromise = promisify(exec);
 
@@ -99,8 +100,37 @@ export async function POST(request) {
     const acrResult = await acrResponse.json();
     console.log('ACRCloud response:', JSON.stringify(acrResult, null, 2));
 
+    // Parse ACRCloud result
+    const songInfo = parseACRCloudResult(acrResult);
+
+    if (!songInfo) {
+      return NextResponse.json({
+        success: false,
+        error: 'No music detected in the video',
+        acrcloud: acrResult,
+      });
+    }
+
+    // Get Spotify token from request (passed from frontend)
+    const spotifyToken = request.headers.get('x-spotify-token');
+
+    let spotifyTrack = null;
+    if (spotifyToken) {
+      try {
+        spotifyTrack = await searchSpotifyTrack(
+          songInfo.title,
+          songInfo.artists,
+          spotifyToken
+        );
+      } catch (error) {
+        console.error('Spotify search error:', error);
+      }
+    }
+
     return NextResponse.json({
       success: true,
+      song: songInfo,
+      spotifyTrack,
       acrcloud: acrResult,
       debug: {
         inputSize: buffer.length,
