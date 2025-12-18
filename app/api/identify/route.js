@@ -1,11 +1,30 @@
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir, stat } from 'fs/promises';
+import { writeFile, mkdir, stat, readFile } from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import crypto from 'crypto';
 
 const execPromise = promisify(exec);
+
+function createSignature(accessKey, accessSecret, timestamp) {
+  const stringToSign = [
+    'POST',
+    '/v1/identify',
+    accessKey,
+    'audio',
+    '1',
+    timestamp
+  ].join('\n');
+
+  const signature = crypto
+    .createHmac('sha1', accessSecret)
+    .update(Buffer.from(stringToSign, 'utf-8'))
+    .digest()
+    .toString('base64');
+  return signature;
+}
 
 export async function POST(request) {
   try {
@@ -31,7 +50,7 @@ export async function POST(request) {
     const inputPath = path.join(tmpDir, 'input.mp4');
     await writeFile(inputPath, buffer);
 
-    // Extract 12 seconds of audio with FFmpeg
+    //Will Extract 12 seconds of audio with FFmpeg
     const outputPath = path.join(tmpDir, 'clip.wav');
     const ffmpegCommand = `ffmpeg -y -i "${inputPath}" -ss 0 -t 12 -ac 1 -ar 44100 "${outputPath}"`;
 
@@ -40,19 +59,53 @@ export async function POST(request) {
     console.log('FFmpeg output:', stdout);
     if (stderr) console.log('FFmpeg stderr:',  stderr);
 
-    // Verify output file exists and has non-zero size
+    //Verify output file exists and has non-zero size
     const fileStats = await stat(outputPath);
     if (!fileStats.size) {
       throw new Error('FFmpeg produced an empty file');
     }
 
+    // Call ACRCloud Identify API
+    const accessKey = process.env.ACRCLOUD_ACCESS_KEY;
+    const accessSecret = process.env.ACRCLOUD_ACCESS_SECRET;
+    const host = process.env.ACRCLOUD_HOST;
+
+    if (!accessKey || !accessSecret || !host) {
+      throw new Error('ACRCloud credentials not configured');
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const signature = createSignature(accessKey, accessSecret, timestamp);
+
+    // Read audio file
+    const audioBuffer = await readFile(outputPath);
+
+    // Build multipart form-data for ACRCloud
+    const acrFormData = new FormData();
+    acrFormData.append('sample', new Blob([audioBuffer]), 'clip.wav');
+    acrFormData.append('sample_bytes', audioBuffer.length.toString());
+    acrFormData.append('access_key', accessKey);
+    acrFormData.append('data_type', 'audio');
+    acrFormData.append('signature_version', '1');
+    acrFormData.append('signature', signature);
+    acrFormData.append('timestamp', timestamp);
+
+    console.log('Calling ACRCloud API...');
+    const acrResponse = await fetch(`https://${host}/v1/identify`, {
+      method: 'POST',
+      body: acrFormData,
+    });
+
+    const acrResult = await acrResponse.json();
+    console.log('ACRCloud response:', JSON.stringify(acrResult, null, 2));
+
     return NextResponse.json({
       success: true,
-      message: 'Audio extracted successfully',
-      inputPath,
-      outputPath,
-      inputSize: buffer.length,
-      outputSize: fileStats.size
+      acrcloud: acrResult,
+      debug: {
+        inputSize: buffer.length,
+        audioSize: fileStats.size,
+      }
     });
 
   } catch (error) {
