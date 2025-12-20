@@ -128,9 +128,13 @@ export async function POST(request) {
 
         if (spotifyTrack) {
           //Gets the audio features and detect vibe
+          console.log('Fetching audio features for track:', spotifyTrack.id);
           audioFeatures = await getAudioFeatures(spotifyTrack.id, spotifyToken);
+          console.log('Audio features:', audioFeatures);
           vibe = detectVibe(audioFeatures);
           console.log('Detected vibe:', vibe);
+        } else {
+          console.log('No Spotify track found, skipping vibe detection');
         }
       } catch (error) {
         console.error('Spotify search error:', error);
