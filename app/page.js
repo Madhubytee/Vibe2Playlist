@@ -4,9 +4,12 @@ import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [file, setFile] = useState(null);
+  const [videoUrl, setVideoUrl] = useState(null);
   const [status, setStatus] = useState('idle');
   const [result, setResult] = useState(null);
   const [spotifyToken, setSpotifyToken] = useState(null);
+  const [playlistStatus, setPlaylistStatus] = useState('idle');
+  const [playlist, setPlaylist] = useState(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -41,9 +44,15 @@ export default function Home() {
   };
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
     setStatus('idle');
     setResult(null);
+    setPlaylist(null);
+    if (selectedFile) {
+      const url = URL.createObjectURL(selectedFile);
+      setVideoUrl(url);
+    }
   };
 
   const handleUpload = async () => {
@@ -83,8 +92,42 @@ export default function Home() {
     }
   };
 
+  const handleCreatePlaylist = async () => {
+    if (!result?.spotifyTrack || !spotifyToken) return;
+
+    setPlaylistStatus('creating');
+
+    try {
+      const response = await fetch('/api/playlist/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-spotify-token': spotifyToken,
+        },
+        body: JSON.stringify({
+          trackUri: result.spotifyTrack.uri,
+          trackName: result.spotifyTrack.name,
+          artistName: result.spotifyTrack.artists,
+          trackId: result.spotifyTrack.id,
+          vibe: result.vibe,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPlaylistStatus('success');
+        setPlaylist(data.playlist);
+      } else {
+        setPlaylistStatus('error');
+      }
+    } catch (error) {
+      setPlaylistStatus('error');
+    }
+  };
+
   return (
-    <main style={{ padding: '2rem', fontFamily: 'system-ui, sans-serif', maxWidth: '600px' }}>
+    <main style={{ padding: '2rem', fontFamily: 'system-ui, sans-serif', maxWidth: '1200px' }}>
       <h1>Vibe2Playlist</h1>
       <p>Turn a video clip into a Spotify playlist!</p>
 
@@ -134,6 +177,100 @@ export default function Home() {
           {status === 'recognizing' ? 'Recognizing...' : 'Upload'}
         </button>
       </div>
+
+      {videoUrl && status === 'success' && (
+        <div style={{ display: 'flex', gap: '2rem', marginTop: '2rem' }}>
+          <div style={{ flex: '1' }}>
+            <h3>Your Edit</h3>
+            <video
+              src={videoUrl}
+              controls
+              style={{
+                width: '100%',
+                maxWidth: '500px',
+                borderRadius: '8px',
+                backgroundColor: '#000',
+              }}
+            />
+          </div>
+
+          <div style={{ flex: '1' }}>
+            {result?.song && (
+              <div>
+                <h3>Detected Song</h3>
+                <p><strong>{result.song.title}</strong></p>
+                <p>by {result.song.artists}</p>
+                {result.song.album && <p>Album: {result.song.album}</p>}
+
+                {result.vibe && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '0.75rem',
+                    backgroundColor: '#f0f0f0',
+                    borderRadius: '4px',
+                    borderLeft: '4px solid #1DB954',
+                  }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#666' }}>
+                      This edit feels:
+                    </p>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                      {result.vibe.name}
+                    </p>
+                  </div>
+                )}
+
+                {result.spotifyTrack && (
+                  <div style={{ marginTop: '1.5rem' }}>
+                    <button
+                      onClick={handleCreatePlaylist}
+                      disabled={playlistStatus === 'creating'}
+                      style={{
+                        padding: '0.75rem 1.5rem',
+                        backgroundColor: playlistStatus === 'creating' ? '#ccc' : '#1DB954',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: playlistStatus === 'creating' ? 'not-allowed' : 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                      }}
+                    >
+                      {playlistStatus === 'creating' ? 'Creating Playlist...' : 'Create Playlist'}
+                    </button>
+
+                    {playlist && (
+                      <div style={{
+                        marginTop: '1rem',
+                        padding: '1rem',
+                        backgroundColor: '#1DB954',
+                        borderRadius: '4px',
+                      }}>
+                        <h4 style={{ margin: 0, color: 'white' }}>✓ Playlist Created!</h4>
+                        <p style={{ color: 'white', margin: '0.5rem 0' }}>
+                          {playlist.name}
+                          {playlist.trackCount && <span> • {playlist.trackCount} tracks</span>}
+                        </p>
+                        <a
+                          href={playlist.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: 'white',
+                            textDecoration: 'underline',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          Open in Spotify →
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {status !== 'idle' && (
         <div style={{

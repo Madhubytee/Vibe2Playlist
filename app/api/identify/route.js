@@ -5,7 +5,7 @@ import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import crypto from 'crypto';
-import { parseACRCloudResult, searchSpotifyTrack } from '../../../lib/spotify.js';
+import { parseACRCloudResult, searchSpotifyTrack, getAudioFeatures, detectVibe } from '../../../lib/spotify.js';
 
 const execPromise = promisify(exec);
 
@@ -66,7 +66,7 @@ export async function POST(request) {
       throw new Error('FFmpeg produced an empty file');
     }
 
-    // Call ACRCloud Identify API
+    //Call ACRCloud Identify API
     const accessKey = process.env.ACRCLOUD_ACCESS_KEY;
     const accessSecret = process.env.ACRCLOUD_ACCESS_SECRET;
     const host = process.env.ACRCLOUD_HOST;
@@ -78,10 +78,10 @@ export async function POST(request) {
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const signature = createSignature(accessKey, accessSecret, timestamp);
 
-    // Read audio file
+    //Read audio file
     const audioBuffer = await readFile(outputPath);
 
-    // Build multipart form-data for ACRCloud
+    //Build multipart form-data for ACRCloud
     const acrFormData = new FormData();
     acrFormData.append('sample', new Blob([audioBuffer]), 'clip.wav');
     acrFormData.append('sample_bytes', audioBuffer.length.toString());
@@ -100,7 +100,7 @@ export async function POST(request) {
     const acrResult = await acrResponse.json();
     console.log('ACRCloud response:', JSON.stringify(acrResult, null, 2));
 
-    // Parse ACRCloud result
+    // Parsse ACRCloud result
     const songInfo = parseACRCloudResult(acrResult);
 
     if (!songInfo) {
@@ -111,10 +111,13 @@ export async function POST(request) {
       });
     }
 
-    // Get Spotify token from request (passed from frontend)
+    //Gets Spotify token from request (which is passed from frontend)
     const spotifyToken = request.headers.get('x-spotify-token');
 
     let spotifyTrack = null;
+    let audioFeatures = null;
+    let vibe = null;
+
     if (spotifyToken) {
       try {
         spotifyTrack = await searchSpotifyTrack(
@@ -122,6 +125,13 @@ export async function POST(request) {
           songInfo.artists,
           spotifyToken
         );
+
+        if (spotifyTrack) {
+          //Gets the audio features and detect vibe
+          audioFeatures = await getAudioFeatures(spotifyTrack.id, spotifyToken);
+          vibe = detectVibe(audioFeatures);
+          console.log('Detected vibe:', vibe);
+        }
       } catch (error) {
         console.error('Spotify search error:', error);
       }
@@ -131,6 +141,7 @@ export async function POST(request) {
       success: true,
       song: songInfo,
       spotifyTrack,
+      vibe,
       acrcloud: acrResult,
       debug: {
         inputSize: buffer.length,
