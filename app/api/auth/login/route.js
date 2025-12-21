@@ -18,7 +18,8 @@ export async function GET() {
   const scopes = [
     'user-read-email',
     'playlist-modify-public',
-    'playlist-modify-private'
+    'playlist-modify-private',
+    'user-read-private'
   ];
   const params = new URLSearchParams({
     client_id: clientId,

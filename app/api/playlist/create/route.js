@@ -11,7 +11,7 @@ export async function POST(request) {
         { status: 401 }
       );
     }
-    const { trackUri, trackName, artistName, trackId, vibe } = await request.json();
+    const { trackUri, trackName, artistName, trackId } = await request.json();
 
     if (!trackUri || !trackName) {
       return NextResponse.json(
@@ -62,16 +62,21 @@ export async function POST(request) {
     //Get recommended tracks based on vibe
     let trackUris = [trackUri];
 
-    if (trackId && vibe) {
+    if (trackId) {
       try {
-        const recommendations = await getRecommendations(trackId, vibe, spotifyToken, 19);
+        console.log('Requesting recommendations for track:', trackId);
+        const recommendations = await getRecommendations(trackId, spotifyToken, 19);
+        console.log(`Got ${recommendations.length} recommendations`);
         const recommendedUris = recommendations.map(track => track.uri);
         trackUris = [trackUri, ...recommendedUris];
         console.log(`Adding ${trackUris.length} tracks to playlist`);
       } catch (error) {
         console.error('Recommendations error:', error);
-        // this will Continue with just the original track if recommendations fail
+        console.error('Error message:', error.message);
+        // Continue with just the original track if recommendations fail
       }
+    } else {
+      console.log('Skipping recommendations - no trackId');
     }
 
     //Add tracks to playlist

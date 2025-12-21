@@ -5,7 +5,7 @@ import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import crypto from 'crypto';
-import { parseACRCloudResult, searchSpotifyTrack, getAudioFeatures, detectVibe } from '../../../lib/spotify.js';
+import { parseACRCloudResult, searchSpotifyTrack, detectVibeFromGenres } from '../../../lib/spotify.js';
 
 const execPromise = promisify(exec);
 
@@ -113,32 +113,35 @@ export async function POST(request) {
 
     //Gets Spotify token from request (which is passed from frontend)
     const spotifyToken = request.headers.get('x-spotify-token');
+    console.log('Spotify token present:', !!spotifyToken);
 
     let spotifyTrack = null;
-    let audioFeatures = null;
     let vibe = null;
 
     if (spotifyToken) {
       try {
+        console.log('Searching Spotify for:', songInfo.title, 'by', songInfo.artists);
         spotifyTrack = await searchSpotifyTrack(
           songInfo.title,
           songInfo.artists,
           spotifyToken
         );
+        console.log('Spotify track found:', !!spotifyTrack);
 
         if (spotifyTrack) {
-          //Gets the audio features and detect vibe
-          console.log('Fetching audio features for track:', spotifyTrack.id);
-          audioFeatures = await getAudioFeatures(spotifyTrack.id, spotifyToken);
-          console.log('Audio features:', audioFeatures);
-          vibe = detectVibe(audioFeatures);
+          // Detect vibe using genre-based detection from ACRCloud
+          console.log('Using genre-based vibe detection. Genres:', songInfo.genres);
+          vibe = detectVibeFromGenres(songInfo.genres);
           console.log('Detected vibe:', vibe);
         } else {
           console.log('No Spotify track found, skipping vibe detection');
         }
       } catch (error) {
         console.error('Spotify search error:', error);
+        console.error('Error details:', error.message, error.stack);
       }
+    } else {
+      console.log('No Spotify token provided, skipping Spotify search');
     }
 
     return NextResponse.json({
