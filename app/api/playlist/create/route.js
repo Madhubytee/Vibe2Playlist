@@ -11,7 +11,7 @@ export async function POST(request) {
         { status: 401 }
       );
     }
-    const { trackUri, trackName, artistName, trackId } = await request.json();
+    const { trackUri, trackName, artistName, trackId, vibe, editDescription } = await request.json();
 
     if (!trackUri || !trackName) {
       return NextResponse.json(
@@ -65,7 +65,9 @@ export async function POST(request) {
     if (trackId) {
       try {
         console.log('Requesting recommendations for track:', trackId);
-        const recommendations = await getRecommendations(trackId, spotifyToken, 19);
+        console.log('Vibe:', vibe?.name || 'Unknown');
+        console.log('Edit description:', editDescription || 'None');
+        const recommendations = await getRecommendations(trackId, spotifyToken, vibe, editDescription, 19);
         console.log(`Got ${recommendations.length} recommendations`);
         const recommendedUris = recommendations.map(track => track.uri);
         trackUris = [trackUri, ...recommendedUris];

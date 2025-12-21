@@ -10,18 +10,9 @@ export async function GET(request) {
       new URL(`/?error=${error}`, request.url)
     );
   }
-
   if (!code) {
     return NextResponse.redirect(
       new URL('/?error=no_code', request.url)
-    );
-  }
-
-  const codeVerifier = request.cookies.get('spotify_code_verifier')?.value;
-
-  if (!codeVerifier) {
-    return NextResponse.redirect(
-      new URL('/?error=no_verifier', request.url)
     );
   }
 
@@ -40,7 +31,6 @@ export async function GET(request) {
         grant_type: 'authorization_code',
         code,
         redirect_uri: redirectUri,
-        code_verifier: codeVerifier,
       }),
     });
 
@@ -58,11 +48,7 @@ export async function GET(request) {
     redirectUrl.searchParams.set('refresh_token', tokenData.refresh_token);
     redirectUrl.searchParams.set('expires_in', tokenData.expires_in);
 
-    const response = NextResponse.redirect(redirectUrl);
-
-    response.cookies.delete('spotify_code_verifier');
-
-    return response;
+    return NextResponse.redirect(redirectUrl);
 
   } catch (error) {
     console.error('Callback error:', error);

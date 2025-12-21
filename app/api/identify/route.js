@@ -60,13 +60,12 @@ export async function POST(request) {
     console.log('FFmpeg output:', stdout);
     if (stderr) console.log('FFmpeg stderr:',  stderr);
 
-    //Verify output file exists and has non-zero size
+    //Verify output file exists and has nonzero size
     const fileStats = await stat(outputPath);
     if (!fileStats.size) {
       throw new Error('FFmpeg produced an empty file');
     }
-
-    //Call ACRCloud Identify API
+    //Calls ACRCloud Identify API
     const accessKey = process.env.ACRCLOUD_ACCESS_KEY;
     const accessSecret = process.env.ACRCLOUD_ACCESS_SECRET;
     const host = process.env.ACRCLOUD_HOST;
@@ -81,7 +80,7 @@ export async function POST(request) {
     //Read audio file
     const audioBuffer = await readFile(outputPath);
 
-    //Build multipart form-data for ACRCloud
+    //Build multipart form  data for ACRCloud
     const acrFormData = new FormData();
     acrFormData.append('sample', new Blob([audioBuffer]), 'clip.wav');
     acrFormData.append('sample_bytes', audioBuffer.length.toString());
@@ -100,7 +99,7 @@ export async function POST(request) {
     const acrResult = await acrResponse.json();
     console.log('ACRCloud response:', JSON.stringify(acrResult, null, 2));
 
-    // Parsse ACRCloud result
+    //Parsse ACRCloud result
     const songInfo = parseACRCloudResult(acrResult);
 
     if (!songInfo) {
@@ -129,9 +128,9 @@ export async function POST(request) {
         console.log('Spotify track found:', !!spotifyTrack);
 
         if (spotifyTrack) {
-          // Detect vibe using genre-based detection from ACRCloud
+          //Detect th vibe using genre based detection from ACRCloud
           console.log('Using genre-based vibe detection. Genres:', songInfo.genres);
-          vibe = detectVibeFromGenres(songInfo.genres);
+          vibe = detectVibeFromGenres(songInfo.genres, songInfo.title, songInfo.artists);
           console.log('Detected vibe:', vibe);
         } else {
           console.log('No Spotify track found, skipping vibe detection');

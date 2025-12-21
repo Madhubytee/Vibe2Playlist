@@ -10,6 +10,7 @@ export default function Home() {
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [playlistStatus, setPlaylistStatus] = useState('idle');
   const [playlist, setPlaylist] = useState(null);
+  const [editDescription, setEditDescription] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -110,6 +111,7 @@ export default function Home() {
           artistName: result.spotifyTrack.artists,
           trackId: result.spotifyTrack.id,
           vibe: result.vibe,
+          editDescription: editDescription,
         }),
       });
 
@@ -221,6 +223,30 @@ export default function Home() {
 
                 {result.spotifyTrack && (
                   <div style={{ marginTop: '1.5rem' }}>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label htmlFor="editDescription" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.95rem' }}>
+                        Describe your edit (optional):
+                      </label>
+                      <textarea
+                        id="editDescription"
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        placeholder="e.g., 'Minecraft gameplay montage', 'Sabrina Carpenter aesthetic edit', 'sad anime edit about loss', 'gym motivation workout', etc."
+                        rows="3"
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          borderRadius: '4px',
+                          border: '1px solid #ddd',
+                          fontFamily: 'inherit',
+                          fontSize: '0.9rem',
+                          resize: 'vertical',
+                        }}
+                      />
+                      <p style={{ fontSize: '0.8rem', color: '#666', margin: '0.5rem 0 0 0' }}>
+                        Help AI find better matches by describing your video's content, celebrities featured, or the mood/theme
+                      </p>
+                    </div>
                     <button
                       onClick={handleCreatePlaylist}
                       disabled={playlistStatus === 'creating'}

@@ -22,6 +22,7 @@
   "homepage": "https://github.com/Madhubytee/Vibe2Playlist#readme",
   "dependencies": {
     "next": "^16.0.10",
+    "openai": "^6.15.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   }
