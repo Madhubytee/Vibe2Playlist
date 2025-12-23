@@ -59,8 +59,28 @@ export async function POST(request) {
 
     const playlist = await createPlaylistResponse.json();
 
+    //Get the first track's album art
+    const firstTrackResponse = await fetch(
+      `https://api.spotify.com/v1/tracks/${trackId}`,
+      {
+        headers: { 'Authorization': `Bearer ${spotifyToken}` }
+      }
+    );
+
+    let firstTrackAlbumArt = null;
+    if (firstTrackResponse.ok) {
+      const firstTrackData = await firstTrackResponse.json();
+      firstTrackAlbumArt = firstTrackData.album?.images?.[0]?.url || null;
+    }
+
     //Get recommended tracks based on vibe
     let trackUris = [trackUri];
+    let allTracks = [{
+      name: trackName,
+      artists: artistName,
+      uri: trackUri,
+      albumArt: firstTrackAlbumArt,
+    }];
 
     if (trackId) {
       try {
@@ -71,6 +91,7 @@ export async function POST(request) {
         console.log(`Got ${recommendations.length} recommendations`);
         const recommendedUris = recommendations.map(track => track.uri);
         trackUris = [trackUri, ...recommendedUris];
+        allTracks = [allTracks[0], ...recommendations];
         console.log(`Adding ${trackUris.length} tracks to playlist`);
       } catch (error) {
         console.error('Recommendations error:', error);
@@ -108,6 +129,7 @@ export async function POST(request) {
         name: playlist.name,
         url: playlist.external_urls.spotify,
         trackCount: trackUris.length,
+        tracks: allTracks,
       },
     });
 
